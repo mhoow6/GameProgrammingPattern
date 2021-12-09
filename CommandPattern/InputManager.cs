@@ -3,93 +3,113 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InputManager : MonoBehaviour
+namespace CommandPattern
 {
-    // 키:명령을 하기 위한 입력(반환값 bool), 값:입력에 해당하는 명령
-    Dictionary<Func<bool>, Command> _commandMap = new Dictionary<Func<bool>, Command>();
-
-    #region 명령들
-    abstract public class Command
+    public class InputManager : MonoBehaviour
     {
-        public abstract void exectue();
-    }
+        public Actor player;
 
-    public class CommandJump : Command
-    {
-        public override void exectue()
+        // 키:명령을 하기 위한 KeyCode, 값:입력에 해당하는 명령
+        Dictionary<KeyCode, Command> _keyBind = new Dictionary<KeyCode, Command>();
+
+        #region 명령들
+        abstract public class Command
         {
-            Debug.Log("Jump");
+            public abstract void Execute(Actor actor);
         }
-    }
 
-    public class CommandAttack : Command
-    {
-        public override void exectue()
+        public class CommandNull : Command
         {
-            Debug.Log("Attack");
-        }
-    }
-
-    public class CommandCrouch : Command
-    {
-        public override void exectue()
-        {
-            Debug.Log("Crouch");
-        }
-    }
-    #endregion
-
-    // 명령에 대한 기본값 설정
-    void Awake()
-    {
-        _commandMap.Add(() => { return Input.GetKeyDown(KeyCode.Space); }, new CommandJump());
-        _commandMap.Add(() => { return Input.GetKeyDown(KeyCode.Mouse0); }, new CommandAttack());
-        _commandMap.Add(() => { return Input.GetKeyDown(KeyCode.LeftControl); }, new CommandCrouch());
-    }
-
-    void Update()
-    {
-        // 지정된 입력들을 게임에서 실제로 했는지 검증하고, 입력에 맞는 명령 수행
-        foreach (var kvp in _commandMap)
-        {
-            if (kvp.Key.Invoke() == true)
+            public override void Execute(Actor actor)
             {
-                kvp.Value.exectue();
+                
             }
         }
 
-        // TEST
-        if (Input.GetKeyDown(KeyCode.A))
+        public class CommandJump : Command
         {
-            ChangeKey(KeyCode.Space, new CommandAttack());
-        }
-    }
-
-    // 원하는 키 입력 변경
-    public void ChangeKey(KeyCode keyCode, Command command)
-    {
-        bool overlapped = false;
-        Func<bool> inputMethod = () =>
-        {
-            return Input.GetKeyDown(keyCode);
-        };
-
-        // 1. 매개변수로 받은 KeyCode가 이미 키 설정에 존재하는 입력인가?
-        foreach (var key in _commandMap.Keys)
-        {
-            
+            public override void Execute(Actor actor)
+            {
+                actor.Jump();
+            }
         }
 
-        // 2. 이미 있는 거면 경고 메시지 출력
-        if (overlapped == true)
+        public class CommandAttack : Command
         {
-            //  YES -> 새로운 입력방식으로 명령처리
-            //  NO  -> 무시
+            public override void Execute(Actor actor)
+            {
+                actor.Attack();
+            }
         }
-        // 3. 아니면 그냥 추가
-        else
+
+        public class CommandCrouch : Command
         {
-            _commandMap.Add(inputMethod, command);
+            public override void Execute(Actor actor)
+            {
+                actor.Crouch();
+            }
+        }
+        #endregion
+
+        // 명령에 대한 기본값 설정
+        void Awake()
+        {
+            RegisterInput(
+                KeyCode.Space
+                , new CommandJump()
+            );
+            RegisterInput(
+                KeyCode.Mouse0
+                , new CommandAttack()
+            );
+            RegisterInput(
+                KeyCode.LeftControl
+                , new CommandCrouch()
+            );
+        }
+
+        // O(N)
+        void Update()
+        {
+            // 지정된 입력들을 게임에서 실제로 했는지 검증하고, 입력에 맞는 명령 수행
+            foreach (var kvp in _keyBind)
+            {
+                if (Input.GetKeyDown(kvp.Key))
+                {
+                    kvp.Value.Execute(player);
+                }
+            }
+        }
+
+        bool RegisterInput(KeyCode keyCode, Command command)
+        {
+            if (_keyBind.TryGetValue(keyCode, out _) == false)
+            {
+                _keyBind.Add(keyCode, command);
+                return true;
+            }
+            return false;
+        }
+
+        // 원하는 키 입력 변경
+        public void ChangeKey(KeyCode keyCode, Command command)
+        {
+            bool overlapped = false;
+            // 1. 매개변수로 받은 KeyCode가 이미 키 설정에 존재하는 입력인가?
+            overlapped = !RegisterInput(keyCode, command);
+
+            // 2. TODO: 이미 있는 거면 경고 메시지창 출력
+            if (overlapped == true)
+            {
+                //  YES(바꾸겠다) -> 새로운 명령으로 바꿔치기 -> 메시지창 닫기
+                _keyBind.Remove(keyCode);
+                _keyBind.Add(keyCode, command);
+                Debug.Log("입력에 따른 명령을 바꿨습니다");
+
+                //  NO(안 바꾸겠다) -> 메시지 창 닫기
+            }
+
+            // 3. TODO: 메시지 창 닫기
         }
     }
 }
