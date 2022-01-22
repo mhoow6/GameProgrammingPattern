@@ -18,6 +18,9 @@ namespace ObserverPattern
         void OnNotify(EventType type);
     }
 
+    /// <summary>
+    /// 자신이 관찰받는 대상이 될 경우 상속받습니다
+    /// </summary>
     public class EventSubject : MonoBehaviour
     {
         List<IEventObservable> observers = new List<IEventObservable>();
@@ -32,13 +35,7 @@ namespace ObserverPattern
 
         protected void Notify(EventType type)
         {
-            // IEventObservable을 구현한 클래스의 OnNotify에서
-            // AddObserver 혹은 RemoveObserver 하여 observers에서 해당 클래스가 빠져도
-            // 여기서 새롭게 리스트를 만들기 때문에 for문에서 안전하게 순회하게 한다.
-            List<IEventObservable> copied = new List<IEventObservable>();
-            copied.AddRange(observers);
-
-            foreach (var ob in copied)
+            foreach (var ob in observers)
             {
                 ob.OnNotify(type);
             }
